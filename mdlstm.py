@@ -3,11 +3,11 @@ from tensorflow.contrib.rnn import RNNCell, LSTMStateTuple
 from tensorflow.contrib.rnn.python.ops.core_rnn_cell import _linear
 
 
-def normalise_layer(tensor, scope = None, epsilon = 1e-5):
+def normalise_layer(tensor, scope=None, epsilon=1e-5):
     """
     Layer normalisation of a 2D tensor along its 2nd axis
-    :param tensor: TODO: what is this?
-    :param scope: TODO: what for?
+    :param tensor: input tensor
+    :param scope: scope of the tensor
     :param epsilon: avoid divide by zero
     :return: normalised layer
     """
@@ -66,8 +66,8 @@ class MultiDimensionalLSTMCell(RNNCell):
         LSTM cell
         :param inputs: shape (batch, n)
         :param state: the states and hidden unit of the two cells
-        :param scope: TODO: what is this?
-        :return:
+        :param scope: scope of the MDLSTM cell
+        :return: hidden unit and state
         """
 
         with tf.variable_scope(scope or type(self).__name__):
@@ -108,9 +108,9 @@ class MultiDimensionalLSTMCell(RNNCell):
 def get_up(t_, w_):
     """
     Function to get the sample skipping one row
-    :param t_: TODO: what?
-    :param w_: TODO: what?
-    :return: TODO: what?
+    :param t_: time
+    :param w_: width
+    :return: time minus width
     """
     return t_ - tf.constant(w_)
 
@@ -120,20 +120,20 @@ def get_last(t_, w_):
     Function to get the previous sample
     :param t_:
     :param w_:
-    :return:
+    :return: time minus 1
     """
     return t_ - tf.constant(1)
 
 
-def mdlstm_while_loop(rnn_size, input_data, sh, dims=None, scope_n='layer1'):
+def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='layer1'):
     """
     Implement naive MDLSTM
     :param rnn_size: hidden units
     :param input_data: data to process of shape [batch, h, w, channels]
-    :param sh: shape of windows [height, width]
+    :param window_shape: shape of windows [height, width]
     :param dims: dimensions to reverse the input data, e.g.
         dims=[False, True, True, False] => True means reverse dimension
-    :param scope_n: # TODO: what is this?
+    :param scope_n: scope of this MDLSTM layer
     :return: output of LSTM of shape [batch, h/sh[0], w/sh[1], rnn_size]
         and inner states
     """
@@ -150,8 +150,8 @@ def mdlstm_while_loop(rnn_size, input_data, sh, dims=None, scope_n='layer1'):
         channels = shape[3]
 
         # Window size
-        X_win = sh[0]
-        Y_win = sh[1]
+        X_win = window_shape[0]
+        Y_win = window_shape[1]
 
         # Runtime batch size
         batch_size_runtime = tf.shape(input_data)[0]
@@ -189,7 +189,7 @@ def mdlstm_while_loop(rnn_size, input_data, sh, dims=None, scope_n='layer1'):
         # Reshape to 1D tensor of shape (height * width * batch_size, features)
         x = tf.reshape(x, [-1, features])
         # Split tensor into height * width tensors of size (batch_size, features)
-        x = tf.split(value= x, axis=0, num_or_size_splits=height * width)
+        x = tf.split(value=x, axis=0, num_or_size_splits=height * width)
 
         # Create input tensor array to use inside the loop
         inputs_ta = tf.TensorArray(dtype=tf.float32,
