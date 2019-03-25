@@ -147,21 +147,21 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
         # Get shape of input (batch_size, x, y, channels)
         shape = input_data.get_shape().as_list()
         batch_size = shape[0]
-        X_dim = shape[1]
-        Y_dim = shape[2]
+        input_h = shape[1]
+        input_w = shape[2]
         channels = shape[3]
 
         # Window size
-        X_win = window_shape[0]
-        Y_win = window_shape[1]
+        win_h = window_shape[0]
+        win_w = window_shape[1]
 
         # Runtime batch size
         batch_size_runtime = tf.shape(input_data)[0]
 
         # If input cannot be exactly sampled by window, pad with zeros
-        if X_dim % X_win != 0:
+        if input_h % win_h != 0:
             # Get offset size
-            offset = tf.zeros(shape=[batch_size_runtime, X_dim, Y_win - (Y_dim % Y_win), channels])
+            offset = tf.zeros(shape=[batch_size_runtime, input_h, win_w - (input_w % win_w), channels])
 
             # Concatenate Y dimension
             input_data = tf.concat(axis=2, values=[input_data, offset])
@@ -170,13 +170,13 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
             shape = input_data.get_shape().as_list()
 
             # Update shape value
-            Y_dim = shape[2]
+            input_w = shape[2]
 
         # Get the steps to perform in X and Y axis
-        height, width = int(X_dim / X_win), int(Y_dim / Y_win)
+        height, width = int(input_h / win_h), int(input_w / win_w)
 
         # Get the number of features (total number of input values per step)
-        features = Y_win * X_win * channels
+        features = win_w * win_h * channels
 
         # Reshape input data to a tensor containing step indices and features inputs
         # Batch size is inferred from tensor size
@@ -215,8 +215,8 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
         # Write to the end of array LSTMStateTuple filled with zeros
         states_ta = states_ta.write(index=height * width,
                                     value=LSTMStateTuple(
-                                        c=tf.zeros([batch_size_runtime, rnn_size], tf.float32),
-                                        h=tf.zeros([batch_size_runtime, rnn_size], tf.float32)
+                                        c=tf.zeros(shape=[batch_size_runtime, rnn_size], dtype=tf.float32),
+                                        h=tf.zeros(shape=[batch_size_runtime, rnn_size], dtype=tf.float32)
                                     ))
 
         # Initial index
@@ -238,7 +238,7 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
             # Else, read immediate last
             state_last = tf.cond(pred=tf.less(x=zero, y=tf.mod(time_, tf.constant(width))),
                                  true_fn=lambda: states_ta_.read(get_last(time_, width)),
-                                 false_fn=lambda: states_ta_.read(height, width))
+                                 false_fn=lambda: states_ta_.read(height * width))
 
             # Build input state in both dimensions
             current_state = state_up[0], state_last[0], state_up[1], state_last[1]
