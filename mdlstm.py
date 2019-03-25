@@ -75,8 +75,10 @@ class MultiDimensionalLSTMCell(RNNCell):
             # h: output
             c1, c2, h1, h2 = state
 
+            # Returns: 2D tensor shape [batch, output_size]
+            #       = sum_i(args[i] * W[i]), where W[i]s are newly created matrices
             # Change bias argument to False since LN will add bias via shift
-            concat = _linear([inputs, h1, h2], 5 * self._num_units, False)
+            concat = _linear(args=[inputs, h1, h2], output_size=5 * self._num_units, bias=False)
 
             # TODO: what are these?
             i, j, f1, f2, o = tf.split(value=concat, num_or_size_splits=5, axis=1)
@@ -178,7 +180,7 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
 
         # Reshape input data to a tensor containing step indices and features inputs
         # Batch size is inferred from tensor size
-        x = tf.reshape(input_data, [batch_size_runtime, height, width, features])
+        x = tf.reshape(input_data, shape=[batch_size_runtime, height, width, features])
 
         # Reverse selected dimensions
         if dims is not None:

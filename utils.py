@@ -21,6 +21,10 @@ flags.DEFINE_integer('batch_size', 1, 'batch size')
 flags.DEFINE_integer('save_steps', 1000, 'step to save checkpoint')
 flags.DEFINE_integer('validation_steps', 1000, 'steps for validation')
 
+flags.DEFINE_float('decay_rate', 0.98, 'learning rate decay rate')
+flags.DEFINE_float('beta1', 0.9, 'parameter of Adam optimizer beta1')
+flags.DEFINE_float('beta2', 0.999, 'Adam parameter beta2')
+
 flags.DEFINE_integer('decay_steps', 10000, 'learning rate decay step')
 flags.DEFINE_float('momentum', 0.9, 'momentum')
 
