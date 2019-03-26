@@ -1,7 +1,8 @@
 import numpy as np
 import os
+
 from PIL import Image
-from utils import FLAGS, sparse_tuple_from_label
+from utils import *
 
 
 def get_input_lens(sequences):
@@ -34,6 +35,11 @@ class DataIterator:
 
                 # Append image to class properties
                 self.image.append(im)
+
+                # Append label to class properties
+                label = img_name.split('/'[-1].split('_')[1].split('.')[0])
+                label = [SPACE_INDEX if label == SPACE_TOKEN else encode_maps[c] for c in list(label)]
+                self.labels.append(label)
 
     @property
     def size(self):

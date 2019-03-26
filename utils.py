@@ -38,14 +38,18 @@ flags.DEFINE_integer('num_gpus', 1, 'number of GPUS')
 FLAGS = flags.FLAGS
 
 # Number of class = 26 lowercase + 26 uppercase + blank + space
-num_classes = 26 + 1 + 1
+# num_classes = 26 + 1 + 1
+num_classes = 3 + 2 + 10 + 1 + 1
 
 max_print_len = 100
 
 # Character set
-char_set = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+# char_set = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+char_set = '0123456789+-*()'
+
 encode_maps = {}
 decode_maps = {}
+
 for i, char in enumerate(char_set, start=1):
     encode_maps[char] = i
     decode_maps[i] = char

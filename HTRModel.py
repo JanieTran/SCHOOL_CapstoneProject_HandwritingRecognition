@@ -45,7 +45,7 @@ class HTRModel(object):
 
     def build_graph(self):
         """
-        TODO: what is this?
+        Build model
         :return:
         """
         self._build_model()
@@ -137,12 +137,12 @@ class HTRModel(object):
         tf.summary.histogram(name='cost', values=self.cost)
 
         # Learning rate and optimiser
-        self.lr = tf.train.exponential_decay(learning_rate=self.learning_rate,
-                                             global_step=self.global_step,
-                                             decay_steps=self.decay_steps,
-                                             decay_rate=self.decay_rate,
-                                             staircase=True)
-        self.optimiser = tf.train.MomentumOptimizer(learning_rate=self.lr,
+        self.learning_rate_decay = tf.train.exponential_decay(learning_rate=self.learning_rate,
+                                                              global_step=self.global_step,
+                                                              decay_steps=self.decay_steps,
+                                                              decay_rate=self.decay_rate,
+                                                              staircase=True)
+        self.optimiser = tf.train.MomentumOptimizer(learning_rate=self.learning_rate_decay,
                                                     momentum=self.momentum,
                                                     use_nesterov=True)
         self.optimiser = self.optimiser.minimize(loss=self.cost, global_step=self.global_step)
@@ -157,11 +157,14 @@ class HTRModel(object):
                                                                     merge_repeated=False)
 
         # Compute Levenshtein distance between sequences
-        self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(self.decoded[0], dtype=tf.int32), truth=self.labels))
+        self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(self.decoded[0], dtype=tf.int32),
+                                                   truth=self.labels))
         tf.summary.scalar('ler', self.ler)
 
         # Fully-connected
         self.dense_decoded = tf.sparse_tensor_to_dense(sp_input=self.decoded[0], default_value=-1)
+
+        # Printing
         tf.Print(input_=self.dense_decoded, data=[self.dense_decoded], message='dense_decoded')
         tf.Print(input_=tf.sparse_tensor_to_dense(sp_input=self.labels, default_value=-1),
                  data=[tf.sparse_tensor_to_dense(sp_input=self.labels, default_value=-1)],

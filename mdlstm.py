@@ -80,23 +80,23 @@ class MultiDimensionalLSTMCell(RNNCell):
             # Change bias argument to False since LN will add bias via shift
             concat = _linear(args=[inputs, h1, h2], output_size=5 * self._num_units, bias=False)
 
-            # TODO: what are these?
-            i, j, f1, f2, o = tf.split(value=concat, num_or_size_splits=5, axis=1)
+            # Parameters of an LSTM
+            input_gate, c_tilde, forget_1, forget_2, output_gate = tf.split(value=concat, num_or_size_splits=5, axis=1)
 
             # Add layer normalisation to each gate
-            i = normalise_layer(tensor=i, scope='i/')
-            j = normalise_layer(tensor=j, scope='j/')
-            f1 = normalise_layer(tensor=f1, scope='f1/')
-            f2 = normalise_layer(tensor=f2, scope='f2/')
-            o = normalise_layer(tensor=o, scope='o/')
+            input_gate = normalise_layer(tensor=input_gate, scope='input_gate/')
+            c_tilde = normalise_layer(tensor=c_tilde, scope='c_tilde/')
+            forget_1 = normalise_layer(tensor=forget_1, scope='forget_1/')
+            forget_2 = normalise_layer(tensor=forget_2, scope='forget_2/')
+            output_gate = normalise_layer(tensor=output_gate, scope='output_gate/')
 
-            # TODO: what is this?
-            new_c = (c1 * tf.nn.sigmoid(f1 + self._forget_bias) +
-                     c2 * tf.nn.sigmoid(f2 + self._forget_bias) +
-                     tf.nn.sigmoid(i) + self._activation(j))
+            # Updated memory cell
+            new_c = (c1 * tf.nn.sigmoid(forget_1 + self._forget_bias) +
+                     c2 * tf.nn.sigmoid(forget_2 + self._forget_bias) +
+                     tf.nn.sigmoid(input_gate) * self._activation(c_tilde))
 
             # Add layer norm in calculation of new hidden state
-            new_h = self._activation(normalise_layer(new_c, scope='new_h/')) + tf.nn.sigmoid(o)
+            new_h = self._activation(normalise_layer(new_c, scope='new_h/')) + tf.nn.sigmoid(output_gate)
             new_state = LSTMStateTuple(c=new_c, h=new_h)
 
             return new_h, new_state
