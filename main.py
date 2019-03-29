@@ -15,8 +15,6 @@ from DataIterator import DataIterator
 
 
 # Helpers
-FLAGS = utils.FLAGS
-
 logger = logging.getLogger('Training for HTR')
 logger.setLevel(logging.INFO)
 
@@ -26,7 +24,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
     Train model
     :param train_dir: directory for train data
     :param val_dir: directory for validation data
-    :param mode: train/val mode
+    :param mode: train/val MODE
     :return:
     """
     # Initialise model
@@ -34,20 +32,24 @@ def train(train_dir=None, val_dir=None, mode='train'):
     model.build_graph()
 
     # Load data
-    print('----------Loading train data----------')
+    print('\n----------Loading data----------')
     train_feeder = DataIterator(data_dir=train_dir)
     print('Train size:', train_feeder.size)
 
-    print('----------Loading validation data----------')
     val_feeder = DataIterator(data_dir=val_dir)
-    print('Validation size: ', val_feeder.size)
+    print('Validation size:', val_feeder.size)
 
     # Batch size
     num_train_samples = train_feeder.size
-    num_train_batches_per_epoch = int(num_train_samples / FLAGS.batch_size)
+    num_train_batches_per_epoch = int(num_train_samples / utils.BATCH_SIZE)
+    print('num_train_samples:', num_train_samples)
+    print('batch_size:', utils.BATCH_SIZE)
+    print('num_train_batches_per_epoch:', num_train_batches_per_epoch)
 
     num_val_samples = val_feeder.size
-    num_val_batches_per_epoch = int(num_val_samples / FLAGS.batch_size)
+    num_val_batches_per_epoch = int(num_val_samples / utils.BATCH_SIZE)
+    print('num_val_samples', num_val_samples)
+    print('num_val_batches_per_epoch: {}\n'.format(num_val_batches_per_epoch))
 
     # Shuffle validation indices
     shuffle_index_val = np.random.permutation(num_val_samples)
@@ -60,20 +62,20 @@ def train(train_dir=None, val_dir=None, mode='train'):
         sess.run(tf.global_variables_initializer())
 
         saver = tf.train.Saver(var_list=tf.global_variables(), max_to_keep=100)
-        train_writer = tf.summary.FileWriter(logdir=FLAGS.log_dir + '/train', graph=sess.graph)
+        train_writer = tf.summary.FileWriter(logdir=utils.LOG_DIR + 'train/', graph=sess.graph)
 
         # Restore checkpoints
-        if FLAGS.restore:
-            checkpoint = tf.train.latest_checkpoint(checkpoint_dir=FLAGS.checkpoint_dir)
+        if utils.RESTORE:
+            checkpoint = tf.train.latest_checkpoint(checkpoint_dir=utils.CHECKPOINT_DIR)
             if checkpoint:
                 saver.restore(sess=sess, save_path=checkpoint)
                 print('-----Restore from checkpoint', checkpoint)
 
         # Training
-        print('----------Begin Training----------')
-        for current_epoch in range(FLAGS.num_epochs):
+        print('\n----------Begin Training----------')
+        for current_epoch in range(utils.NUM_EPOCHS):
             # Shuffle train indices
-            shuffle_index = np.random.permutation(shuffle_index)
+            shuffle_index = np.random.permutation(num_train_samples)
 
             # Initialise/Reset cost
             train_cost = 0
@@ -93,7 +95,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
 
                 # Get batch from indices
                 indices = [shuffle_index[i % num_train_samples] for i in
-                           range(current_batch * FLAGS.batch_size, (current_batch + 1) * FLAGS.batch_size)]
+                           range(current_batch * utils.BATCH_SIZE, (current_batch + 1) * utils.BATCH_SIZE)]
                 batch_inputs, batch_seq_len, batch_labels = train_feeder.input_index_generate_batch(index=indices)
 
                 # Feed dict to model
@@ -109,26 +111,27 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     fetches=[model.merged_summary, model.cost, model.global_step, model.train_op],
                     feed_dict=feed_dict
                 )
+                print('Step {} - Batch_cost {}'.format(step, batch_cost))
 
                 # Calculate cost
-                delta_batch_cost = batch_cost * FLAGS.batch_size
+                delta_batch_cost = batch_cost * utils.BATCH_SIZE
                 train_cost += delta_batch_cost
                 train_writer.add_summary(summary=summary_str, global_step=step)
 
                 # Save checkpoint
-                if step % FLAGS.save_steps == 1:
+                if step % utils.SAVE_STEPS == 1:
                     # Make directory of not existing
-                    if not os.path.isdir(FLAGS.checkpoint_dir):
-                        os.mkdir(FLAGS.checkpoint_dir)
+                    if not os.path.isdir(utils.CHECKPOINT_DIR):
+                        os.mkdir(utils.CHECKPOINT_DIR)
                     # Log info
                     logger.info('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
-                               save_path=os.path.join(FLAGS.checkpoint_dir, 'htr-model'),
+                               save_path=os.path.join(utils.CHECKPOINT_DIR, 'htr-model'),
                                global_step=step)
 
                 # Validation
-                if step % FLAGS.validation_steps == 0:
+                if step % utils.VALIDATION_STEPS == 0:
                     # Initialise batch accuracy
                     acc_batch_total = 0
                     learning_rate = 0
@@ -136,7 +139,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     for j in range(num_val_batches_per_epoch):
                         # Get batch from indices
                         val_indices = [shuffle_index_val[i % num_val_samples] for i in
-                                       range(j * FLAGS.batch_size, (j + 1) * FLAGS.batch_size)]
+                                       range(j * utils.BATCH_SIZE, (j + 1) * utils.BATCH_SIZE)]
                         val_inputs, val_seq_len, val_labels = val_feeder.input_index_generate_batch(val_indices)
 
                         # Validation feed dict
@@ -160,13 +163,13 @@ def train(train_dir=None, val_dir=None, mode='train'):
                         acc_batch_total += accuracy
 
                     # Average accuracy
-                    accuracy = (acc_batch_total * FLAGS.batch_size) / num_val_samples
-                    avg_train_cost = train_cost / ((current_batch + 1) * FLAGS.batch_size)
+                    accuracy = (acc_batch_total * utils.BATCH_SIZE) / num_val_samples
+                    avg_train_cost = train_cost / ((current_batch + 1) * utils.BATCH_SIZE)
 
                     # Capture time epoch ends
                     now = datetime.datetime.now()
                     timestamp = '[{}/{} {}:{}:{}]'.format(now.day, now.month, now.hour, now.minute, now.second)
-                    epoch_info = 'Epoch {}/{}:'.format(current_epoch + 1, FLAGS.num_epochs)
+                    epoch_info = 'Epoch {}/{}:'.format(current_epoch + 1, utils.NUM_EPOCHS)
                     params_results = 'lr = {}, train_cost = {}, acc = {},'.format(learning_rate, avg_train_cost, accuracy)
                     time_elapsed = 'time_elapsed = {}'.format(time.time() - start_time)
                     print(timestamp, epoch_info, params_results, time_elapsed)
@@ -176,15 +179,17 @@ def main(_):
     """
     Main function
     """
-    if FLAGS.num_gpus == 0:
+    if utils.NUM_GPUS == 0:
         dev = '/cpu:0'
-    elif FLAGS.num_gpus == 1:
+    elif utils.NUM_GPUS == 1:
         dev = '/gpu:0'
     else:
         raise ValueError('Only support 0 or 1 GPU.')
 
-    if FLAGS.mode == 'train':
-        train(train_dir=FLAGS.train_dir, val_dir=FLAGS.val_dir, mode=FLAGS.mode)
+    print('Device:', dev)
+    with tf.device(dev):
+        if utils.MODE == 'train':
+            train(train_dir=utils.TRAIN_DIR, val_dir=utils.VAL_DIR, mode=utils.MODE)
 
 
 if __name__ == '__main__':

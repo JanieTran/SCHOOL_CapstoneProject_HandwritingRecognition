@@ -11,8 +11,7 @@ from mdlstm import *
 
 
 # Import constants from utils
-FLAGS = utils.FLAGS
-num_classes = utils.num_classes
+num_classes = utils.NUM_CLASSES
 
 
 class HTRModel(object):
@@ -26,17 +25,17 @@ class HTRModel(object):
         self.seq_len = tf.placeholder(dtype=tf.int32, shape=[None])
 
         # Parameters
-        self.learning_rate = FLAGS.initial_learning_rate
-        self.decay_steps = FLAGS.decay_steps
-        self.decay_rate = FLAGS.decay_rate
-        self.momentum = FLAGS.momentum
-        self.batch_size = FLAGS.batch_size
-        self.beta1 = FLAGS.beta1
-        self.beta2 = FLAGS.beta2
-        self.height = FLAGS.img_height
-        self.width = FLAGS.img_width
-        self.channels = FLAGS.img_channel
-        self.hidden_size = FLAGS.num_hidden
+        self.learning_rate = utils.INITIAL_LEARNING_RATE
+        self.decay_steps = utils.DECAY_STEPS
+        self.decay_rate = utils.DECAY_RATE
+        self.momentum = utils.MOMENTUM
+        self.batch_size = utils.BATCH_SIZE
+        self.beta1 = utils.BETA1
+        self.beta2 = utils.BETA2
+        self.height = utils.IMG_HEIGHT
+        self.width = utils.IMG_WIDTH
+        self.channels = utils.IMG_CHANNEL
+        self.hidden_size = utils.NUM_HIDDEN
 
         # Placeholder to store inputs
         self.inputs = tf.placeholder(dtype=tf.float32,
@@ -46,7 +45,6 @@ class HTRModel(object):
     def build_graph(self):
         """
         Build model
-        :return:
         """
         self._build_model()
         self._build_train_op()
@@ -63,6 +61,7 @@ class HTRModel(object):
             'updates_collections': None
         }
 
+        print('\n----------Building model----------')
         # Scoping mechanism: pass a set of shared arguments to
         #       each operation defined in the same scope
         with slim.arg_scope(list_ops_or_scope=[slim.conv2d, slim.fully_connected],
@@ -70,19 +69,29 @@ class HTRModel(object):
                             normalizer_params=batch_norm_params):
             # Inputs
             x = self.inputs
-            x = tf.reshape(x, shape=[FLAGS.batch_size, FLAGS.img_height, FLAGS.img_width, FLAGS.img_channel])
+            print('x:', x.get_shape().as_list())
+            x = tf.reshape(x, shape=[utils.BATCH_SIZE, utils.IMG_HEIGHT, utils.IMG_WIDTH, utils.IMG_CHANNEL])
+            print('x reshaped:', x.get_shape().as_list())
 
             # Block 1
+            print('\n-----Block 1-----')
             net = slim.conv2d(inputs=x, num_outputs=16, kernel_size=[3, 3], scope='conv1')
+            print('conv1:', net.get_shape().as_list())
             net = slim.max_pool2d(inputs=net, kernel_size=[2, 2], scope='pool1')
+            print('pool1:', net.get_shape().as_list())
             net, _ = mdlstm_while_loop(rnn_size=32, input_data=net,
                                        window_shape=[1, 1], dims=None, scope_n='mdlstm1')
+            print('mdlstm1:', net.get_shape().as_list())
 
             # Block 2
+            print('\n-----Block 2-----')
             net = slim.conv2d(inputs=net, num_outputs=64, kernel_size=[3, 3], scope='conv2')
+            print('conv2:', net.get_shape().as_list())
             net = slim.max_pool2d(inputs=net, kernel_size=[2, 2], scope='pool2')
+            print('pool2:', net.get_shape().as_list())
             net, _ = mdlstm_while_loop(rnn_size=124, input_data=net,
                                        window_shape=[1, 1], dims=None, scope_n='mdlstm2')
+            print('mdlstm2:', net.get_shape().as_list())
 
         # Shapes
         ss = net.get_shape().as_list()
@@ -91,14 +100,16 @@ class HTRModel(object):
 
         # Outputs
         outputs = tf.transpose(net, perm=[2, 0, 1, 3])
+        print('\noutputs transposed:', outputs.get_shape().as_list())
         outputs = tf.reshape(outputs, shape=[-1, shape[1] * shape[3]])
+        print('outputs reshaped:', outputs.get_shape().as_list())
 
         # Train
         with tf.name_scope('Train'):
             # Params initialisation
             with tf.variable_scope('ctc_lost-1') as scope:
                 # Initialiser
-                trunc_norm = tf.truncated_normal_initializer(mean=0., stddev=0.75, seed=None, dtype=tf.float32)
+                trunc_norm = tf.truncated_normal_initializer(mean=0., stddev=.075, seed=None, dtype=tf.float32)
 
                 # Weights and bias
                 W = tf.get_variable('w', shape=[ss[1] * ss[3], 200], initializer=trunc_norm)
@@ -114,23 +125,34 @@ class HTRModel(object):
 
         # y_hat = W*x + b
         logits = tf.matmul(outputs, W) + b
+        print('\nW: {} - b: {}'.format(W.get_shape().as_list(), b.get_shape().as_list()))
+        print('logits:', logits.get_shape().as_list())
 
         # Dropout
         logits = slim.dropout(logits, is_training=self.is_training, scope='dropout4')
+        print('logits dropout:', logits.get_shape().as_list())
         logits = tf.matmul(logits, W1) + b1
+        print('W1: {} - b1: {}'.format(W1.get_shape().as_list(), b1.get_shape().as_list()))
+        print('logits W1 b1:', logits.get_shape().as_list())
 
         # Transform outputs
         logits = tf.reshape(logits, shape=[batch_size, -1, num_classes])
+        print('logits reshaped:', logits.get_shape().as_list())
         logits = tf.transpose(logits, perm=(1, 0, 2))
+        print('logits transposed:', logits.get_shape().as_list())
 
         self.logits = logits
 
     def _build_train_op(self):
         """
-
+        Training operations
         """
-        # Loss from CNN_LSTM_CTC
+        print('\n----------Initialising training operations----------')
+        # Global step
         self.global_step = tf.Variable(initial_value=0, trainable=False)
+
+        # Loss from CNN_LSTM_CTC
+        print('logits:', self.logits.get_shape().as_list())
         self.loss = tf.nn.ctc_loss(labels=self.labels, inputs=self.logits, sequence_length=self.seq_len)
         self.cost = tf.reduce_mean(self.loss)
         tf.summary.scalar(name='cost', tensor=self.cost)

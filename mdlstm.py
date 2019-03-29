@@ -96,7 +96,7 @@ class MultiDimensionalLSTMCell(RNNCell):
                      tf.nn.sigmoid(input_gate) * self._activation(c_tilde))
 
             # Add layer norm in calculation of new hidden state
-            new_h = self._activation(normalise_layer(new_c, scope='new_h/')) + tf.nn.sigmoid(output_gate)
+            new_h = self._activation(normalise_layer(new_c, scope='new_h/')) * tf.nn.sigmoid(output_gate)
             new_state = LSTMStateTuple(c=new_c, h=new_h)
 
             return new_h, new_state
@@ -140,12 +140,16 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
         and inner states
     """
 
+    print('---{}---'.format(scope_n))
+
     with tf.variable_scope('MDLSTMCell-' + scope_n):
         # Create MDLSTM cell with selected size
         cell = MultiDimensionalLSTMCell(rnn_size)
 
-        # Get shape of input (batch_size, x, y, channels)
+        # Get shape of input (BATCH_SIZE, x, y, channels)
         shape = input_data.get_shape().as_list()
+        print('<- input_data shape:', shape)
+
         batch_size = shape[0]
         input_h = shape[1]
         input_w = shape[2]
@@ -161,14 +165,22 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
         # If input cannot be exactly sampled by window, pad with zeros
         if input_h % win_h != 0:
             # Get offset size
-            offset = tf.zeros(shape=[batch_size_runtime, input_h, win_w - (input_w % win_w), channels])
-
-            # Concatenate Y dimension
-            input_data = tf.concat(axis=2, values=[input_data, offset])
-
+            offset = tf.zeros(shape=[batch_size_runtime, win_h - (input_h % win_h), input_w, channels])
+            # Concatenate X dimension
+            input_data = tf.concat(axis=1, values=[input_data, offset])
             # Get new shape
             shape = input_data.get_shape().as_list()
+            # Update shape value
+            input_w = shape[1]
 
+        # The same for Y axis
+        if input_w % win_w != 0:
+            # Get offset size
+            offset = tf.zeros(shape=[batch_size_runtime, input_h, win_w - (input_w % win_w), channels])
+            # Concatenate Y dimension
+            input_data = tf.concat(axis=2, values=[input_data, offset])
+            # Get new shape
+            shape = input_data.get_shape().as_list()
             # Update shape value
             input_w = shape[2]
 
@@ -181,17 +193,21 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
         # Reshape input data to a tensor containing step indices and features inputs
         # Batch size is inferred from tensor size
         x = tf.reshape(input_data, shape=[batch_size_runtime, height, width, features])
+        print('x:', x.get_shape().as_list())
 
         # Reverse selected dimensions
         if dims is not None:
             x = tf.reverse(x, dims=dims)
 
-        # Reorder inputs to (height, width, batch_size, features)
+        # Reorder inputs to (height, width, BATCH_SIZE, features)
         x = tf.transpose(x, perm=[1, 2, 0, 3])
-        # Reshape to 1D tensor of shape (height * width * batch_size, features)
+        print('x transposed:', x.get_shape().as_list())
+        # Reshape to 1D tensor of shape (height * width * BATCH_SIZE, features)
         x = tf.reshape(x, [-1, features])
-        # Split tensor into height * width tensors of size (batch_size, features)
+        print('x reshaped:', x.get_shape().as_list())
+        # Split tensor into height * width tensors of size (BATCH_SIZE, features)
         x = tf.split(value=x, axis=0, num_or_size_splits=height * width)
+        print('x splitted:', len(x))
 
         # Create input tensor array to use inside the loop
         inputs_ta = tf.TensorArray(dtype=tf.float32,
@@ -275,9 +291,13 @@ def mdlstm_while_loop(rnn_size, input_data, window_shape, dims=None, scope_n='la
         # Reshape outputs to match the shape of input
         y = tf.reshape(tensor=outputs,
                        shape=[height, width, batch_size_runtime, rnn_size])
+        print('y:', y.get_shape().as_list())
 
         # Reorder the dimensions to match input
         y = tf.transpose(y, perm=[2, 0, 1, 3])
+        print('-> y transposed:', y.get_shape().as_list())
+        print('-> states:', states.get_shape().as_list())
+        print('---out of {}---'.format(scope_n))
 
         # Reverse
         if dims is not None:
