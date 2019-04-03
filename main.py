@@ -33,10 +33,10 @@ def train(train_dir=None, val_dir=None, mode='train'):
 
     # Load data
     print('\n----------Loading data----------')
-    train_feeder = DataIterator(data_dir=train_dir)
+    train_feeder = DataIterator(train=True)
     print('Train size:', train_feeder.size)
 
-    val_feeder = DataIterator(data_dir=val_dir)
+    val_feeder = DataIterator(train=False)
     print('Validation size:', val_feeder.size)
 
     # Batch size
@@ -56,13 +56,15 @@ def train(train_dir=None, val_dir=None, mode='train'):
 
     # Config
     config = tf.ConfigProto(allow_soft_placement=True)
+    log_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    logdir = os.path.join(utils.LOG_DIR, log_timestamp) + '/'
 
     with tf.Session(config=config) as sess:
         # Global variables initialiser
         sess.run(tf.global_variables_initializer())
 
         saver = tf.train.Saver(var_list=tf.global_variables(), max_to_keep=100)
-        train_writer = tf.summary.FileWriter(logdir=utils.LOG_DIR + 'train/', graph=sess.graph)
+        train_writer = tf.summary.FileWriter(logdir=logdir, graph=sess.graph)
 
         # Restore checkpoints
         if utils.RESTORE:

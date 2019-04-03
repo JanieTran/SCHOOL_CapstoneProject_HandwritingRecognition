@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os
 import utils
 
@@ -43,30 +44,59 @@ def sparse_tuple_from_label(sequences, dtype=np.int32):
 
 
 class DataIterator:
-    def __init__(self, data_dir):
+    def __init__(self, train):
         self.image = []
         self.labels = []
 
         # Walkthrough data dir to get all folders and files
-        for root, sub_folder, file_list in os.walk(data_dir):
-            # For each image file found
-            for file_path in file_list:
-                # Get the file name
-                img_name = os.path.join(root, file_path)
+        # for root, sub_folder, file_list in os.walk(data_dir):
+        #     # For each image file found
+        #     for file_path in file_list:
+        #         # Get the file name
+        #         img_name = os.path.join(root, file_path)
+        #
+        #         # Convert image to B&W and then to np array, normalise to between 0 and 1
+        #         im = np.array(Image.open(fp=img_name).convert('L')).astype(np.float32) / 255.
+        #         # Reshape image to predefined size
+        #         im = np.reshape(im, [utils.IMG_HEIGHT, utils.IMG_WIDTH, utils.IMG_CHANNEL])
+        #
+        #         # Append image to class properties
+        #         self.image.append(im)
+        #
+        #         # Append label to class properties
+        #         label = img_name.split('/')[-1].split('_')[1].split('.')[0]
+        #
+        #         label = [utils.SPACE_INDEX if label == utils.SPACE_TOKEN else utils.ENCODE_MAPS[c] for c in list(label)]
+        #         self.labels.append(label)
 
-                # Convert image to B&W and then to np array, normalise to between 0 and 1
-                im = np.array(Image.open(fp=img_name).convert('L')).astype(np.float32) / 255.
-                # Reshape image to predefined size
-                im = np.reshape(im, [utils.IMG_HEIGHT, utils.IMG_WIDTH, utils.IMG_CHANNEL])
+        # Load dataframe
+        data_df = pd.read_csv(os.path.join('dataset', 'labels.csv'))
 
-                # Append image to class properties
-                self.image.append(im)
+        # Get data for train set
+        if train:
+            data_df = data_df[data_df['set'] == 'train']
+        # Get data for validation set
+        else:
+            data_df = data_df[data_df['set'] == 'val']
 
-                # Append label to class properties
-                label = img_name.split('/')[-1].split('_')[1].split('.')[0]
+        # For each row in dataframe
+        for _, row in data_df.iterrows():
+            # Convert image to B&W
+            im = Image.open(fp=row['path']).convert('L')
+            # Resize to (60, 800)
+            im = im.resize((utils.IMG_WIDTH, utils.IMG_HEIGHT))
+            # Normalise between 0 and 1
+            im = np.array(im).astype(np.float32) / 255.
+            # Reshape image to predefined size
+            im = np.reshape(im, [utils.IMG_HEIGHT, utils.IMG_WIDTH, utils.IMG_CHANNEL])
 
-                label = [utils.SPACE_INDEX if label == utils.SPACE_TOKEN else utils.ENCODE_MAPS[c] for c in list(label)]
-                self.labels.append(label)
+            # Append image to class properties
+            self.image.append(im)
+
+            # Append label to class properties
+            text = row['text']
+            label = [utils.SPACE_INDEX if text == utils.SPACE_TOKEN else utils.ENCODE_MAPS[c] for c in list(text)]
+            self.labels.append(label)
 
 
     @property

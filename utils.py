@@ -7,11 +7,12 @@ CHECKPOINT_DIR = './checkpoint/'
 INITIAL_LEARNING_RATE = 1e-3
 
 IMG_HEIGHT = 60
-IMG_WIDTH = 180
+# IMG_WIDTH = 180
+IMG_WIDTH = 800
 IMG_CHANNEL = 1
 
 # Max stepsize in LSTM and output of last layer in CNN
-MAX_STEPSIZE = 32
+MAX_STEPSIZE = 64
 NUM_HIDDEN = 50
 NUM_EPOCHS = 10000
 BATCH_SIZE = 1
@@ -35,15 +36,15 @@ LOG_DIR = './log/'
 MODE = 'train'
 NUM_GPUS = 1
 
-# Number of class = 26 lowercase + 26 uppercase + blank + space
-# NUM_CLASSES = 26 + 1 + 1
-NUM_CLASSES = 3 + 2 + 10 + 1 + 1
+# Character set
+CHAR_SET = ' !"#&\'()*+,-./0123456789:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+# CHAR_SET = '0123456789+-*()'
+
+# Number of class
+NUM_CLASSES = len(CHAR_SET)
+# NUM_CLASSES = 3 + 2 + 10 + 1 + 1
 
 MAX_PRINT_LEN = 100
-
-# Character set
-# CHAR_SET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-CHAR_SET = '0123456789+-*()'
 
 ENCODE_MAPS = {}
 DECODE_MAPS = {}
