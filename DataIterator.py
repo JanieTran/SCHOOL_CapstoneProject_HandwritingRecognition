@@ -47,6 +47,8 @@ class DataIterator:
     def __init__(self, train):
         self.image = []
         self.labels = []
+        self.text = []
+        self.image_id = []
 
         # Walkthrough data dir to get all folders and files
         # for root, sub_folder, file_list in os.walk(data_dir):
@@ -80,6 +82,7 @@ class DataIterator:
             data_df = data_df[data_df['set'] == 'val']
 
         # For each row in dataframe
+        count = 0
         for _, row in data_df.iterrows():
             # Convert image to B&W
             im = Image.open(fp=row['path']).convert('L')
@@ -92,12 +95,17 @@ class DataIterator:
 
             # Append image to class properties
             self.image.append(im)
+            self.image_id.append(row['id'])
 
             # Append label to class properties
             text = row['text']
             label = [utils.SPACE_INDEX if text == utils.SPACE_TOKEN else utils.ENCODE_MAPS[c] for c in list(text)]
+            self.text.append(text)
             self.labels.append(label)
 
+            count += 1
+            if count == 5 and not train:
+                break
 
     @property
     def size(self):
@@ -128,11 +136,15 @@ class DataIterator:
         if index:
             image_batch = [self.image[i] for i in index]
             label_batch = [self.labels[i] for i in index]
+            image_id = [self.image_id[i] for i in index]
+            text_batch = [self.text[i] for i in index]
         else:
             image_batch = self.image
             label_batch = self.labels
+            image_id = self.image_id
+            text_batch = self.text
 
         batch_inputs, batch_seq_lens = get_input_lens(np.array(image_batch))
         batch_labels = sparse_tuple_from_label(label_batch)
 
-        return batch_inputs, batch_seq_lens, batch_labels
+        return batch_inputs, batch_seq_lens, batch_labels, image_id, text_batch

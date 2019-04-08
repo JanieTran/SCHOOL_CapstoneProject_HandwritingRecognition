@@ -4,20 +4,20 @@ import numpy as np
 # Whether to restore from the latest checkpoint
 RESTORE = False
 CHECKPOINT_DIR = './checkpoint/'
-INITIAL_LEARNING_RATE = 1e-3
+INITIAL_LEARNING_RATE = 1e-4
 
-IMG_HEIGHT = 60
+IMG_HEIGHT = 64
 # IMG_WIDTH = 180
-IMG_WIDTH = 800
+IMG_WIDTH = 512
 IMG_CHANNEL = 1
 
 # Max stepsize in LSTM and output of last layer in CNN
-MAX_STEPSIZE = 64
+MAX_STEPSIZE = 128
 NUM_HIDDEN = 50
-NUM_EPOCHS = 10000
+NUM_EPOCHS = 2
 BATCH_SIZE = 1
-SAVE_STEPS = 1000
-VALIDATION_STEPS = 1000
+SAVE_STEPS = 10
+VALIDATION_STEPS = 20
 
 DECAY_RATE = 0.98
 # Parameter of Adam optimizer BETA1
@@ -40,10 +40,6 @@ NUM_GPUS = 1
 CHAR_SET = ' !"#&\'()*+,-./0123456789:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 # CHAR_SET = '0123456789+-*()'
 
-# Number of class
-NUM_CLASSES = len(CHAR_SET)
-# NUM_CLASSES = 3 + 2 + 10 + 1 + 1
-
 MAX_PRINT_LEN = 100
 
 ENCODE_MAPS = {}
@@ -58,6 +54,10 @@ SPACE_INDEX = 0
 SPACE_TOKEN = ''
 ENCODE_MAPS[SPACE_TOKEN] = SPACE_INDEX
 DECODE_MAPS[SPACE_INDEX] = SPACE_TOKEN
+
+# Number of class
+NUM_CLASSES = len(ENCODE_MAPS) + 1
+# NUM_CLASSES = 3 + 2 + 10 + 1 + 1
 
 
 # --------------------------------------------------------------------
@@ -79,6 +79,11 @@ def calculate_accuracy(original_seq, decoded_seq, ignore_value=-1, is_print=Fals
         print('Original sequence is different from decoded sequence in length')
         return 0
 
+    original_text = [DECODE_MAPS[c] for c in original_seq[0]]
+    decoded_text = [DECODE_MAPS[c] for c in decoded_seq[0]]
+    print('original_text:', ''.join(original_text))
+    print('decoded_text:', ''.join(decoded_text))
+
     count = 0
     # For each character in original sequence
     for i, origin_label in enumerate(original_seq):
@@ -98,6 +103,8 @@ def calculate_accuracy(original_seq, decoded_seq, ignore_value=-1, is_print=Fals
         # Increase count per correct decoding
         if origin_label == decoded_label:
             count += 1
+
+    # print('correct:', count, end=' ')
 
     return count * 1.0 / len(original_seq)
 

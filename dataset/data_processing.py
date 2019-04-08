@@ -44,6 +44,7 @@ for xml_file in xml_list:
 
         # Get line text
         line_text = line.attrib['text']
+        line_text = line_text.replace('&quot;', '"')
 
         # Get file path
         line_name = line_id.split('-')

@@ -36,8 +36,8 @@ def train(train_dir=None, val_dir=None, mode='train'):
     train_feeder = DataIterator(train=True)
     print('Train size:', train_feeder.size)
 
-    val_feeder = DataIterator(train=False)
-    print('Validation size:', val_feeder.size)
+    # val_feeder = DataIterator(train=False)
+    # print('Validation size:', val_feeder.size)
 
     # Batch size
     num_train_samples = train_feeder.size
@@ -46,13 +46,13 @@ def train(train_dir=None, val_dir=None, mode='train'):
     print('batch_size:', utils.BATCH_SIZE)
     print('num_train_batches_per_epoch:', num_train_batches_per_epoch)
 
-    num_val_samples = val_feeder.size
-    num_val_batches_per_epoch = int(num_val_samples / utils.BATCH_SIZE)
-    print('num_val_samples', num_val_samples)
-    print('num_val_batches_per_epoch: {}\n'.format(num_val_batches_per_epoch))
+    # num_val_samples = val_feeder.size
+    # num_val_batches_per_epoch = int(num_val_samples / utils.BATCH_SIZE)
+    # print('num_val_samples', num_val_samples)
+    # print('num_val_batches_per_epoch: {}\n'.format(num_val_batches_per_epoch))
 
-    # Shuffle validation indices
-    shuffle_index_val = np.random.permutation(num_val_samples)
+    # # Shuffle validation indices
+    # shuffle_index_val = np.random.permutation(num_val_samples)
 
     # Config
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -88,9 +88,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
 
             # Tracing part
             for current_batch in range(num_train_batches_per_epoch):
-                # Log time every 100 batches
-                if (current_batch + 1) % 100 == 0:
-                    print('Batch {} - time: {}'.format(current_batch, time.time() - batch_time))
+                print('\nBatch {} - time: {:.2f}s'.format(current_batch, time.time() - batch_time))
 
                 # Capture time that batch begins
                 batch_time = time.time()
@@ -98,7 +96,8 @@ def train(train_dir=None, val_dir=None, mode='train'):
                 # Get batch from indices
                 indices = [shuffle_index[i % num_train_samples] for i in
                            range(current_batch * utils.BATCH_SIZE, (current_batch + 1) * utils.BATCH_SIZE)]
-                batch_inputs, batch_seq_len, batch_labels = train_feeder.input_index_generate_batch(index=indices)
+                batch_inputs, batch_seq_len, batch_labels, image_id, text_batch = train_feeder.input_index_generate_batch(index=indices)
+                print('image_id: {} - text_batch: {}'.format(image_id, text_batch))
 
                 # Feed dict to model
                 feed_dict = {
@@ -113,7 +112,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     fetches=[model.merged_summary, model.cost, model.global_step, model.train_op],
                     feed_dict=feed_dict
                 )
-                print('Step {} - Batch_cost {}'.format(step, batch_cost))
+                print('Step {} - Batch_cost {} - Cost over length {}'.format(step, batch_cost, batch_cost / len(text_batch[0])))
 
                 # Calculate cost
                 delta_batch_cost = batch_cost * utils.BATCH_SIZE
@@ -126,7 +125,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     if not os.path.isdir(utils.CHECKPOINT_DIR):
                         os.mkdir(utils.CHECKPOINT_DIR)
                     # Log info
-                    logger.info('Save checkpoint of step', step)
+                    print('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
                                save_path=os.path.join(utils.CHECKPOINT_DIR, 'htr-model'),
@@ -134,21 +133,34 @@ def train(train_dir=None, val_dir=None, mode='train'):
 
                 # Validation
                 if step % utils.VALIDATION_STEPS == 0:
+                    print('\n--Validation')
                     # Initialise batch accuracy
                     acc_batch_total = 0
                     learning_rate = 0
+
+                    val_feeder = DataIterator(train=False)
+                    print('Validation size:', val_feeder.size)
+
+                    num_val_samples = val_feeder.size
+                    num_val_batches_per_epoch = int(num_val_samples / utils.BATCH_SIZE)
+                    print('num_val_samples', num_val_samples)
+                    print('num_val_batches_per_epoch: {}\n'.format(num_val_batches_per_epoch))
+
+                    # Shuffle validation indices
+                    shuffle_index_val = np.random.permutation(num_val_samples)
 
                     for j in range(num_val_batches_per_epoch):
                         # Get batch from indices
                         val_indices = [shuffle_index_val[i % num_val_samples] for i in
                                        range(j * utils.BATCH_SIZE, (j + 1) * utils.BATCH_SIZE)]
-                        val_inputs, val_seq_len, val_labels = val_feeder.input_index_generate_batch(val_indices)
+                        val_inputs, val_seq_len, val_labels, val_id, val_text = val_feeder.input_index_generate_batch(val_indices)
+                        print('val_id: {} - val_text: {}'.format(val_id, val_text))
 
                         # Validation feed dict
                         val_feed_dict = {
                             model.inputs: val_inputs,
                             model.labels: val_labels,
-                            model.seq_len:val_seq_len
+                            model.seq_len: val_seq_len
                         }
                         model.is_training = False
 
@@ -161,7 +173,8 @@ def train(train_dir=None, val_dir=None, mode='train'):
                         # Print decoded result
                         original_labels = val_feeder.get_labels(indices=val_indices)
                         accuracy = utils.calculate_accuracy(original_seq=original_labels, decoded_seq=dense_decoded,
-                                                            ignore_value=-1, is_print=True)
+                                                            ignore_value=-1, is_print=False)
+                        print('- accuracy: {:.2f}%'.format(accuracy * 100))
                         acc_batch_total += accuracy
 
                     # Average accuracy
@@ -170,7 +183,7 @@ def train(train_dir=None, val_dir=None, mode='train'):
 
                     # Capture time epoch ends
                     now = datetime.datetime.now()
-                    timestamp = '[{}/{} {}:{}:{}]'.format(now.day, now.month, now.hour, now.minute, now.second)
+                    timestamp = '\n[{}/{} {}:{}:{}]'.format(now.day, now.month, now.hour, now.minute, now.second)
                     epoch_info = 'Epoch {}/{}:'.format(current_epoch + 1, utils.NUM_EPOCHS)
                     params_results = 'lr = {}, train_cost = {}, acc = {},'.format(learning_rate, avg_train_cost, accuracy)
                     time_elapsed = 'time_elapsed = {}'.format(time.time() - start_time)
@@ -184,11 +197,10 @@ def main(_):
     if utils.NUM_GPUS == 0:
         dev = '/cpu:0'
     elif utils.NUM_GPUS == 1:
-        dev = '/gpu:0'
+        dev = '/device:GPU:1'
     else:
         raise ValueError('Only support 0 or 1 GPU.')
 
-    print('Device:', dev)
     with tf.device(dev):
         if utils.MODE == 'train':
             train(train_dir=utils.TRAIN_DIR, val_dir=utils.VAL_DIR, mode=utils.MODE)
