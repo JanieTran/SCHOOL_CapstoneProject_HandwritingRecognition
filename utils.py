@@ -4,6 +4,7 @@ import numpy as np
 # Whether to restore from the latest checkpoint
 RESTORE = False
 CHECKPOINT_DIR = './checkpoint/'
+CRNN_CHECKPOINT_DIR = './checkpoint/crnn/'
 INITIAL_LEARNING_RATE = 1e-4
 
 IMG_HEIGHT = 64
@@ -32,13 +33,13 @@ TRAIN_DIR = './imgs/train/'
 VAL_DIR = './imgs/small_val/'
 INFER_DIR = './imgs/infer/'
 LOG_DIR = './log/'
+CRNN_LOG_DIR = './log/crnn'
 # train, val or infer
 MODE = 'train'
 NUM_GPUS = 1
 
 # Character set
 CHAR_SET = ' !"#&\'()*+,-./0123456789:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-# CHAR_SET = '0123456789+-*()'
 
 MAX_PRINT_LEN = 100
 
@@ -57,12 +58,58 @@ DECODE_MAPS[SPACE_INDEX] = SPACE_TOKEN
 
 # Number of class
 NUM_CLASSES = len(ENCODE_MAPS) + 1
-# NUM_CLASSES = 3 + 2 + 10 + 1 + 1
 
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
+
+
+def encode_label(label):
+    try:
+        return [CHAR_SET.index(x) for x in label]
+    except Exception as ex:
+        print(label)
+        raise ex
+
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+
+
+def sparse_tuple_from_label(sequences, dtype=np.int32):
+    """
+    Create a sparse representation of x
+    :param sequences: A list of lists of type dtype where
+        each element is a sequence
+    :param dtype: Data type of elements in sequences
+    :return: A tuple with (indices, values, shape)
+    """
+    indices = []
+    values = []
+
+    # For each sequence
+    for n, seq in enumerate(sequences):
+        # indices extend [{(n,0), (n, 1), (n,2), ... , (n, len(seq) - 1)}]
+        indices.extend(zip([n] * len(seq), range(len(seq))))
+        # values extend the sequence itself
+        values.extend(seq)
+
+    # Convert to NPArray
+    indices = np.asarray(indices, dtype=np.int64)
+    values = np.asarray(values, dtype=dtype)
+    shape = np.asarray([len(sequences), np.asarray(indices).max(axis=0)[1] + 1], dtype=np.int64)
+
+    return indices, values, shape
+
+
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+
+def decode_result(decoded):
+    decoded_text = [DECODE_MAPS[c] for c in decoded[0]]
+    return ''.join(decoded_text)
 
 
 def calculate_accuracy(original_seq, decoded_seq, ignore_value=-1, is_print=False):
@@ -82,7 +129,7 @@ def calculate_accuracy(original_seq, decoded_seq, ignore_value=-1, is_print=Fals
     original_text = [DECODE_MAPS[c] for c in original_seq[0]]
     decoded_text = [DECODE_MAPS[c] for c in decoded_seq[0]]
     print('original_text:', ''.join(original_text))
-    print('decoded_text:', ''.join(decoded_text))
+    print('decoded_text :', ''.join(decoded_text))
 
     count = 0
     # For each character in original sequence

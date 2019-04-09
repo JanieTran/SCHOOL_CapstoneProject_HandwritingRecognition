@@ -17,32 +17,6 @@ def get_input_lens(sequences):
     return sequences, lengths
 
 
-def sparse_tuple_from_label(sequences, dtype=np.int32):
-    """
-    Create a sparse representation of x
-    :param sequences: A list of lists of type dtype where
-        each element is a sequence
-    :param dtype: Data type of elements in sequences
-    :return: A tuple with (indices, values, shape)
-    """
-    indices = []
-    values = []
-
-    # For each sequence
-    for n, seq in enumerate(sequences):
-        # indices extend [{(n,0), (n, 1), (n,2), ... , (n, len(seq) - 1)}]
-        indices.extend(zip([n] * len(seq), range(len(seq))))
-        # values extend the sequence itself
-        values.extend(seq)
-
-    # Convert to NPArray
-    indices = np.asarray(indices, dtype=np.int64)
-    values = np.asarray(values, dtype=dtype)
-    shape = np.asarray([len(sequences), np.asarray(indices).max(axis=0)[1] + 1], dtype=np.int64)
-
-    return indices, values, shape
-
-
 class DataIterator:
     def __init__(self, train):
         self.image = []
@@ -145,6 +119,6 @@ class DataIterator:
             text_batch = self.text
 
         batch_inputs, batch_seq_lens = get_input_lens(np.array(image_batch))
-        batch_labels = sparse_tuple_from_label(label_batch)
+        batch_labels = utils.sparse_tuple_from_label(label_batch)
 
         return batch_inputs, batch_seq_lens, batch_labels, image_id, text_batch
