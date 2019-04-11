@@ -57,8 +57,8 @@ ENCODE_MAPS[SPACE_TOKEN] = SPACE_INDEX
 DECODE_MAPS[SPACE_INDEX] = SPACE_TOKEN
 
 # Number of class
-NUM_CLASSES = len(ENCODE_MAPS) + 1
-
+# NUM_CLASSES = len(ENCODE_MAPS) + 1
+NUM_CLASSES = len(CHAR_SET) + 1
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
@@ -70,6 +70,15 @@ def encode_label(label):
         return [CHAR_SET.index(x) for x in label]
     except Exception as ex:
         print(label)
+        raise ex
+
+
+def decode_result(decoded):
+    try:
+        return ''.join([CHAR_SET[i] for i in decoded if i != -1])
+    except Exception as ex:
+        print(decoded)
+        print(ex)
         raise ex
 
 # --------------------------------------------------------------------
@@ -106,10 +115,6 @@ def sparse_tuple_from_label(sequences, dtype=np.int32):
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-
-def decode_result(decoded):
-    decoded_text = [DECODE_MAPS[c] for c in decoded[0]]
-    return ''.join(decoded_text)
 
 
 def calculate_accuracy(original_seq, decoded_seq, ignore_value=-1, is_print=False):

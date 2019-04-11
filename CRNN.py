@@ -171,7 +171,7 @@ class CRNN(object):
         print('\n----------Building model----------')
         # Inputs
         inputs = tf.placeholder(dtype=tf.float32, name='inputs',
-                                shape=[batch_size, utils.IMG_HEIGHT, utils.IMG_WIDTH, utils.IMG_CHANNEL])
+                                shape=[batch_size, utils.IMG_WIDTH, utils.IMG_HEIGHT, utils.IMG_CHANNEL])
         print('inputs:', inputs.get_shape().as_list())
         # Labels output
         labels = tf.sparse_placeholder(dtype=tf.int32, name='labels')
