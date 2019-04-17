@@ -8,7 +8,6 @@ import tensorflow as tf
 
 import utils
 from CRNN import CRNN
-from DataIterator import DataIterator
 from DataManager import DataManager
 
 
@@ -60,6 +59,9 @@ def train():
         # ---------------------------------------------------------------------------------
         # ---------------------------------------------------------------------------------
 
+        # with open('log.txt', mode='a+') as f:
+        #     f.write('----------Epoch 1----------\n\n')
+
         # Training
         print('\n----------Begin Training----------')
         for current_epoch in range(utils.NUM_EPOCHS):
@@ -73,6 +75,8 @@ def train():
             start_time = time.time()
             batch_time = time.time()
 
+            step = 0
+
             # TRAINING
             for current_batch in range(num_train_batches_per_epoch):
                 print('\nBatch {} - time: {:.2f}s'.format(current_batch, time.time() - batch_time))
@@ -83,6 +87,7 @@ def train():
                 # Get batch from indices
                 indices = [shuffle_index[i % num_train_samples] for i in
                            range(current_batch * utils.BATCH_SIZE, (current_batch + 1) * utils.BATCH_SIZE)]
+                # indices = [1]
                 image_id, batch_inputs, batch_text, batch_labels = train_feeder.generate_batch(index=indices)
                 print('image_id: {}'.format(image_id))
 
@@ -103,6 +108,11 @@ def train():
                 print('text_batch:', batch_text[0])
                 print('decoded   :', utils.decode_result(decoded[0]))
 
+                with open('log.txt', mode='a+') as f:
+                    f.write('Step {} - Batch_cost {} - Cost over length {}\n'.format(step, batch_cost, batch_cost / len(batch_text[0])))
+                    f.write('text_batch: {}\n'.format(batch_text[0]))
+                    f.write('decoded   : {}\n\n'.format(utils.decode_result(decoded[0])))
+
                 # Calculate cost
                 delta_batch_cost = batch_cost * utils.BATCH_SIZE
                 train_cost += delta_batch_cost
@@ -117,8 +127,12 @@ def train():
                     print('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
-                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model'),
+                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e3'),
                                global_step=step)
+
+            saver.save(sess=sess,
+                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e3'),
+                       global_step=step)
 
             # ---------------------------------------------------------------------------------
             # ---------------------------------------------------------------------------------
@@ -164,21 +178,29 @@ def train():
                 # Print decoded result
                 accuracy = utils.calculate_accuracy(original_seq=val_text, decoded_seq=dense_decoded,
                                                     ignore_value=-1, is_print=False)
-                print('- accuracy: {:.2f}%'.format(accuracy * 100))
+                print('- accuracy: {:.2f}%\n'.format(accuracy * 100))
                 acc_batch_total += accuracy
+
+                with open('validation.txt', mode='a+') as f:
+                    f.write('val_id: {} - accuracy: {:.2f}%\n'.format(val_id, accuracy * 100))
+                    f.write('original: {}\n'.format(val_text))
+                    f.write('decoded : {}\n'.format(utils.decode_result(dense_decoded[0])))
 
             # Average accuracy
             accuracy = (acc_batch_total * utils.BATCH_SIZE) / num_val_samples
-            avg_train_cost = train_cost / ((current_batch + 1) * utils.BATCH_SIZE)
+            # avg_train_cost = train_cost / ((current_batch + 1) * utils.BATCH_SIZE)
 
             # Capture time epoch ends
             now = datetime.datetime.now()
             timestamp = '\n[{}/{} {}:{}:{}]'.format(now.day, now.month, now.hour, now.minute, now.second)
             epoch_info = 'Epoch {}/{}:'.format(current_epoch + 1, utils.NUM_EPOCHS)
-            params_results = 'lr = {}, train_cost = {}, acc = {},'.format(learning_rate, avg_train_cost, accuracy)
+            params_results = 'lr = {}, acc = {},'.format(learning_rate, accuracy)
             time_elapsed = 'time_elapsed = {}'.format(time.time() - start_time)
             print(timestamp, epoch_info, params_results, time_elapsed)
             print('-----')
+
+            with open('validation.txt', mode='a+') as f:
+                f.write('{} {} {}'.format(timestamp, params_results, time_elapsed))
 
 
 

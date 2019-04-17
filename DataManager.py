@@ -26,6 +26,8 @@ def resize_image(image_path):
         image_arr_resized = imresize(image_arr, size=(utils.IMG_HEIGHT, new_width))
         final_arr[:, 0:min(utils.IMG_WIDTH, new_width)] = image_arr_resized[:, 0:utils.IMG_WIDTH]
 
+    final_arr = np.array(final_arr).astype(np.float32) / 255.
+
     return final_arr
 
 

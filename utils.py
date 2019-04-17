@@ -2,12 +2,12 @@ import numpy as np
 
 
 # Whether to restore from the latest checkpoint
-RESTORE = False
+RESTORE = True
 CHECKPOINT_DIR = './checkpoint/'
 CRNN_CHECKPOINT_DIR = './checkpoint/crnn/'
 INITIAL_LEARNING_RATE = 1e-4
 
-IMG_HEIGHT = 64
+IMG_HEIGHT = 32
 # IMG_WIDTH = 180
 IMG_WIDTH = 512
 IMG_CHANNEL = 1
@@ -15,9 +15,9 @@ IMG_CHANNEL = 1
 # Max stepsize in LSTM and output of last layer in CNN
 MAX_STEPSIZE = 128
 NUM_HIDDEN = 50
-NUM_EPOCHS = 2
+NUM_EPOCHS = 1
 BATCH_SIZE = 1
-SAVE_STEPS = 10
+SAVE_STEPS = 3000
 VALIDATION_STEPS = 20
 
 DECAY_RATE = 0.98
@@ -75,7 +75,8 @@ def encode_label(label):
 
 def decode_result(decoded):
     try:
-        return ''.join([CHAR_SET[i] for i in decoded if i != -1])
+
+        return ''.join([CHAR_SET[a] for a in decoded if a != -1])
     except Exception as ex:
         print(decoded)
         print(ex)
@@ -127,38 +128,30 @@ def calculate_accuracy(original_seq, decoded_seq, ignore_value=-1, is_print=Fals
     :return: Accuracy score
     """
     # If 2 sequences are of different lengths, wrong recognition
-    if len(original_seq) != len(decoded_seq):
-        print('Original sequence is different from decoded sequence in length')
-        return 0
+    # if len(original_seq) != len(decoded_seq):
+    #     print('Original sequence is different from decoded sequence in length')
+    #     return 0
 
-    original_text = [DECODE_MAPS[c] for c in original_seq[0]]
-    decoded_text = [DECODE_MAPS[c] for c in decoded_seq[0]]
-    print('original_text:', ''.join(original_text))
-    print('decoded_text :', ''.join(decoded_text))
+    decoded_text = decode_result(decoded_seq[0])
+    print('original_text:', original_seq[0])
+    print('decoded_text :', decoded_text)
+
+    if len(original_seq[0]) <= len(decoded_text):
+        decoded = [decoded_text[i] for i in range(len(original_seq[0]))]
+    else:
+        decoded = [''] * len(original_seq[0])
+        for i in range(len(decoded_text)):
+            decoded[i] = decoded_text[i]
 
     count = 0
     # For each character in original sequence
-    for i, origin_label in enumerate(original_seq):
-        # Get the corresponding character in decoded label
-        decoded_label = [j for j in decoded_seq[i] if j != ignore_value]
-
-        # If call for print
-        if is_print and i < MAX_PRINT_LEN:
-            # Print out origin character and decoded character
-            print('Sequence {}: origin: {} - decoded: {}'.format(i, origin_label, decoded_label))
-
-            # Save both in test file
-            with open('./test.csv', 'w') as f:
-                f.write(str(origin_label) + '\t' + str(decoded_label))
-                f.write('\n')
-
-        # Increase count per correct decoding
-        if origin_label == decoded_label:
+    for e in range(len(original_seq[0])):
+        if original_seq[0][e] == decoded[e]:
             count += 1
 
-    # print('correct:', count, end=' ')
+    print('correct:', count, end=' ')
 
-    return count * 1.0 / len(original_seq)
+    return count * 1.0 / len(original_seq[0])
 
 
 # --------------------------------------------------------------------

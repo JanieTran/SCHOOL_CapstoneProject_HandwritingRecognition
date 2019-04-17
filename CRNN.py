@@ -25,7 +25,7 @@ def BiLSTM_K(inputs, sequence_length):
     # BILSTM 1
     print('\n-----BiLSTM1-----')
     # LSTM cell
-    lstm_1 = tf.keras.layers.LSTM(units=256, return_sequences=True)
+    lstm_1 = tf.keras.layers.LSTM(units=512, return_sequences=True)
 
     # Bi-directional LSTM cell
     bilstm_1 = tf.keras.layers.Bidirectional(lstm_1, merge_mode='concat')
@@ -36,8 +36,8 @@ def BiLSTM_K(inputs, sequence_length):
 
     # BILSTM 2
     print('-----BiLSTM2-----')
-    # LSTM cell
-    lstm_2 = tf.keras.layers.LSTM(units=256, return_sequences=True)
+    # LSTM
+    lstm_2 = tf.keras.layers.LSTM(units=512, return_sequences=True)
 
     # Bi-directional LSTM cell
     bilstm_2 = tf.keras.layers.Bidirectional(lstm_2, merge_mode='concat')
