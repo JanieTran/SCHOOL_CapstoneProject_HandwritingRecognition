@@ -59,8 +59,8 @@ def train():
         # ---------------------------------------------------------------------------------
         # ---------------------------------------------------------------------------------
 
-        # with open('log.txt', mode='a+') as f:
-        #     f.write('----------Epoch 1----------\n\n')
+        with open('log.txt', mode='a+') as f:
+            f.write('\n\n----------Epoch 7----------\n\n')
 
         # Training
         print('\n----------Begin Training----------')
@@ -127,11 +127,11 @@ def train():
                     print('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
-                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e3'),
+                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e7'),
                                global_step=step)
 
             saver.save(sess=sess,
-                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e3'),
+                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e7'),
                        global_step=step)
 
             # ---------------------------------------------------------------------------------
@@ -182,8 +182,8 @@ def train():
                 acc_batch_total += accuracy
 
                 with open('validation.txt', mode='a+') as f:
-                    f.write('val_id: {} - accuracy: {:.2f}%\n'.format(val_id, accuracy * 100))
-                    f.write('original: {}\n'.format(val_text))
+                    f.write('\nval_id: {} - accuracy: {:.2f}%\n'.format(val_id, accuracy * 100))
+                    f.write('original: {}\n'.format(val_text[0]))
                     f.write('decoded : {}\n'.format(utils.decode_result(dense_decoded[0])))
 
             # Average accuracy
@@ -200,8 +200,8 @@ def train():
             print('-----')
 
             with open('validation.txt', mode='a+') as f:
-                f.write('{} {} {}'.format(timestamp, params_results, time_elapsed))
-
+                f.write('{} {} {}\n'.format(timestamp, params_results, time_elapsed))
+                f.write('------------------------------------------------------------------------\n')
 
 
 def main(_):

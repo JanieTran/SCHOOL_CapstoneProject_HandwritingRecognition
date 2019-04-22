@@ -226,7 +226,7 @@ class CRNN(object):
         decoded, log_prob = tf.nn.ctc_beam_search_decoder(
             inputs=logits,
             sequence_length=sequence_length,
-            merge_repeated=True
+            merge_repeated=False
         )
         dense_decoded = tf.sparse_tensor_to_dense(sp_input=decoded[0], default_value=-1)
 
