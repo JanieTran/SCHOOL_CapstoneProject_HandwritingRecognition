@@ -60,7 +60,7 @@ def train():
         # ---------------------------------------------------------------------------------
 
         with open('log.txt', mode='a+') as f:
-            f.write('\n\n----------Epoch 7----------\n\n')
+            f.write('\n\n----------Epoch 10----------\n\n')
 
         # Training
         print('\n----------Begin Training----------')
@@ -127,11 +127,11 @@ def train():
                     print('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
-                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e7'),
+                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model'),
                                global_step=step)
 
             saver.save(sess=sess,
-                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-e7'),
+                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model'),
                        global_step=step)
 
             # ---------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ def train():
 
             with open('validation.txt', mode='a+') as f:
                 f.write('{} {} {}\n'.format(timestamp, params_results, time_elapsed))
-                f.write('------------------------------------------------------------------------\n')
+                f.write('\n------------------------------------------------------------------------\n')
 
 
 def main(_):

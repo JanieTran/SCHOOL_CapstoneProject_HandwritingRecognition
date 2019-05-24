@@ -12,8 +12,6 @@ ckpt = ckpt_state.model_checkpoint_path
 model = CRNN()
 model.build_graph(batch_size=utils.BATCH_SIZE)
 
-file_name = resize_image('./dataset/iamdataset/line/a04/a04-000/a04-000-00.png')
-
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
 
@@ -27,5 +25,5 @@ with tf.Session() as sess:
         output_node_names=['CTCBeamSearchDecoder']
     )
 
-    with tf.gfile.GFile('./checkpoint/crnn/frozen_model.pb', 'wb') as f:
+    with tf.gfile.GFile('./checkpoint/crnn/frozen_model_e10.pb', 'wb') as f:
         f.write(output_graph_def.SerializeToString())
