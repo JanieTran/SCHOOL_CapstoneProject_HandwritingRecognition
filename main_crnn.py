@@ -36,11 +36,13 @@ def train():
     # Config
     print()
     config = tf.ConfigProto(allow_soft_placement=True)
-    log_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    logdir = os.path.join(utils.CRNN_LOG_DIR, log_timestamp) + '/'
+    config.gpu_options.allow_growth = True
 
-    if not os.path.isdir(utils.CRNN_LOG_DIR):
-        os.mkdir(utils.CRNN_LOG_DIR)
+    log_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    logdir = os.path.join(utils.INVERSE_LOG_DIR, log_timestamp) + '/'
+
+    if not os.path.isdir(utils.INVERSE_LOG_DIR):
+        os.mkdir(utils.INVERSE_LOG_DIR)
 
     with tf.Session(config=config) as sess:
         # Global variables initialiser
@@ -51,7 +53,7 @@ def train():
 
         # Restore checkpoints
         if utils.RESTORE:
-            checkpoint = tf.train.latest_checkpoint(checkpoint_dir=utils.CRNN_CHECKPOINT_DIR)
+            checkpoint = tf.train.latest_checkpoint(checkpoint_dir=utils.INVERSE_CHECKPOINT_DIR)
             if checkpoint:
                 saver.restore(sess=sess, save_path=checkpoint)
                 print('-----Restore from checkpoint', checkpoint)
@@ -59,8 +61,8 @@ def train():
         # ---------------------------------------------------------------------------------
         # ---------------------------------------------------------------------------------
 
-        with open('log.txt', mode='a+') as f:
-            f.write('\n\n----------Epoch 10----------\n\n')
+        with open('log_inverse.txt', mode='a+') as f:
+            f.write('\n\n----------Epoch 6----------\n\n')
 
         # Training
         print('\n----------Begin Training----------')
@@ -108,7 +110,7 @@ def train():
                 print('text_batch:', batch_text[0])
                 print('decoded   :', utils.decode_result(decoded[0]))
 
-                with open('log.txt', mode='a+') as f:
+                with open('log_inverse.txt', mode='a+') as f:
                     f.write('Step {} - Batch_cost {} - Cost over length {}\n'.format(step, batch_cost, batch_cost / len(batch_text[0])))
                     f.write('text_batch: {}\n'.format(batch_text[0]))
                     f.write('decoded   : {}\n\n'.format(utils.decode_result(decoded[0])))
@@ -121,17 +123,17 @@ def train():
                 # Save checkpoint
                 if step % utils.SAVE_STEPS == 1:
                     # Make directory of not existing
-                    if not os.path.isdir(utils.CRNN_CHECKPOINT_DIR):
-                        os.mkdir(utils.CRNN_CHECKPOINT_DIR)
+                    if not os.path.isdir(utils.INVERSE_CHECKPOINT_DIR):
+                        os.mkdir(utils.INVERSE_CHECKPOINT_DIR)
                     # Log info
                     print('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
-                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model'),
+                               save_path=os.path.join(utils.INVERSE_CHECKPOINT_DIR, 'crnn-model-inverse'),
                                global_step=step)
 
             saver.save(sess=sess,
-                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model'),
+                       save_path=os.path.join(utils.INVERSE_CHECKPOINT_DIR, 'crnn-model-inverse'),
                        global_step=step)
 
             # ---------------------------------------------------------------------------------
@@ -181,7 +183,7 @@ def train():
                 print('- accuracy: {:.2f}%\n'.format(accuracy * 100))
                 acc_batch_total += accuracy
 
-                with open('validation.txt', mode='a+') as f:
+                with open('validation-inverse.txt', mode='a+') as f:
                     f.write('\nval_id: {} - accuracy: {:.2f}%\n'.format(val_id, accuracy * 100))
                     f.write('original: {}\n'.format(val_text[0]))
                     f.write('decoded : {}\n'.format(utils.decode_result(dense_decoded[0])))
@@ -199,7 +201,7 @@ def train():
             print(timestamp, epoch_info, params_results, time_elapsed)
             print('-----')
 
-            with open('validation.txt', mode='a+') as f:
+            with open('validation-inverse.txt', mode='a+') as f:
                 f.write('{} {} {}\n'.format(timestamp, params_results, time_elapsed))
                 f.write('\n------------------------------------------------------------------------\n')
 

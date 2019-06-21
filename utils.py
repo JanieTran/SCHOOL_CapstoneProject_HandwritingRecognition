@@ -5,6 +5,8 @@ import numpy as np
 RESTORE = True
 CHECKPOINT_DIR = './checkpoint/'
 CRNN_CHECKPOINT_DIR = './checkpoint/crnn/'
+INVERSE_CHECKPOINT_DIR = './checkpoint/inverse/'
+
 INITIAL_LEARNING_RATE = 1e-4
 
 IMG_HEIGHT = 32
@@ -34,6 +36,7 @@ VAL_DIR = './imgs/small_val/'
 INFER_DIR = './imgs/infer/'
 LOG_DIR = './log/'
 CRNN_LOG_DIR = './log/crnn'
+INVERSE_LOG_DIR = './log/inverse'
 # train, val or infer
 MODE = 'train'
 NUM_GPUS = 1

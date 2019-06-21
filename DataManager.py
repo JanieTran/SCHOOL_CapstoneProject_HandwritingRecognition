@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import re
 import os
 import utils
 
@@ -27,6 +26,10 @@ def resize_image(image_path):
         final_arr[:, 0:min(utils.IMG_WIDTH, new_width)] = image_arr_resized[:, 0:utils.IMG_WIDTH]
 
     final_arr = np.array(final_arr).astype(np.float32) / 255.
+
+    final_arr = final_arr - final_arr.min()
+    final_arr = final_arr / final_arr.max()
+    final_arr = 1 - final_arr
 
     return final_arr
 
