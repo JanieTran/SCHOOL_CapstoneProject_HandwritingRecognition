@@ -3,7 +3,6 @@ import tensorflow as tf
 import utils
 
 from CRNN import CRNN
-from DataManager import resize_image
 
 
 ckpt_state = tf.train.get_checkpoint_state(utils.CRNN_CHECKPOINT_DIR)
@@ -25,5 +24,5 @@ with tf.Session() as sess:
         output_node_names=['CTCBeamSearchDecoder']
     )
 
-    with tf.gfile.GFile('./checkpoint/crnn/frozen_model_e10.pb', 'wb') as f:
+    with tf.gfile.GFile('./checkpoint/crnn/frozen_model_custom.pb', 'wb') as f:
         f.write(output_graph_def.SerializeToString())

@@ -6,7 +6,7 @@ import utils
 from scipy.misc import imread, imresize, imsave
 
 
-def resize_image(image_path):
+def resize_image(image_path, train=True):
     image_arr = imread(image_path, mode='L')
     rows, cols = np.shape(image_arr)
 
@@ -29,7 +29,9 @@ def resize_image(image_path):
 
     final_arr = final_arr - final_arr.min()
     final_arr = final_arr / final_arr.max()
-    final_arr = 1 - final_arr
+
+    # if train:
+        # final_arr = 1 - final_arr
 
     return final_arr
 
@@ -53,7 +55,7 @@ class DataManager(object):
             data_df = data_df[data_df['set'] == 'train']
         # Get data for validation set
         else:
-            data_df = data_df[data_df['set'] == 'val']
+            data_df = data_df[data_df['set'] == 'test']
 
         # For each row in dataframe
         for _, row in data_df.iterrows():

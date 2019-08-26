@@ -5,6 +5,7 @@ custom/
 iamdataset/
 log/
 checkpoint/
+application/
 *.csv
 *.txt
 *.json

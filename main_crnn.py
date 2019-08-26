@@ -39,10 +39,10 @@ def train():
     config.gpu_options.allow_growth = True
 
     log_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    logdir = os.path.join(utils.INVERSE_LOG_DIR, log_timestamp) + '/'
+    logdir = os.path.join(utils.CRNN_LOG_DIR, log_timestamp) + '/'
 
-    if not os.path.isdir(utils.INVERSE_LOG_DIR):
-        os.mkdir(utils.INVERSE_LOG_DIR)
+    if not os.path.isdir(utils.CRNN_LOG_DIR):
+        os.mkdir(utils.CRNN_LOG_DIR)
 
     with tf.Session(config=config) as sess:
         # Global variables initialiser
@@ -53,7 +53,7 @@ def train():
 
         # Restore checkpoints
         if utils.RESTORE:
-            checkpoint = tf.train.latest_checkpoint(checkpoint_dir=utils.INVERSE_CHECKPOINT_DIR)
+            checkpoint = tf.train.latest_checkpoint(checkpoint_dir=utils.CRNN_CHECKPOINT_DIR)
             if checkpoint:
                 saver.restore(sess=sess, save_path=checkpoint)
                 print('-----Restore from checkpoint', checkpoint)
@@ -61,8 +61,8 @@ def train():
         # ---------------------------------------------------------------------------------
         # ---------------------------------------------------------------------------------
 
-        with open('log_inverse.txt', mode='a+') as f:
-            f.write('\n\n----------Epoch 6----------\n\n')
+        with open('log_custom.txt', mode='a+') as f:
+            f.write('\n\n----------Custom Epochs----------\n\n')
 
         # Training
         print('\n----------Begin Training----------')
@@ -110,7 +110,7 @@ def train():
                 print('text_batch:', batch_text[0])
                 print('decoded   :', utils.decode_result(decoded[0]))
 
-                with open('log_inverse.txt', mode='a+') as f:
+                with open('log_custom.txt', mode='a+') as f:
                     f.write('Step {} - Batch_cost {} - Cost over length {}\n'.format(step, batch_cost, batch_cost / len(batch_text[0])))
                     f.write('text_batch: {}\n'.format(batch_text[0]))
                     f.write('decoded   : {}\n\n'.format(utils.decode_result(decoded[0])))
@@ -118,92 +118,92 @@ def train():
                 # Calculate cost
                 delta_batch_cost = batch_cost * utils.BATCH_SIZE
                 train_cost += delta_batch_cost
-                train_writer.add_summary(summary=summary_str, global_step=step)
+                # train_writer.add_summary(summary=summary_str, global_step=step)
 
                 # Save checkpoint
                 if step % utils.SAVE_STEPS == 1:
                     # Make directory of not existing
-                    if not os.path.isdir(utils.INVERSE_CHECKPOINT_DIR):
-                        os.mkdir(utils.INVERSE_CHECKPOINT_DIR)
+                    if not os.path.isdir(utils.CRNN_CHECKPOINT_DIR):
+                        os.mkdir(utils.CRNN_CHECKPOINT_DIR)
                     # Log info
                     print('Save checkpoint of step', step)
                     # Save session
                     saver.save(sess=sess,
-                               save_path=os.path.join(utils.INVERSE_CHECKPOINT_DIR, 'crnn-model-inverse'),
+                               save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-custom'),
                                global_step=step)
 
             saver.save(sess=sess,
-                       save_path=os.path.join(utils.INVERSE_CHECKPOINT_DIR, 'crnn-model-inverse'),
+                       save_path=os.path.join(utils.CRNN_CHECKPOINT_DIR, 'crnn-model-custom'),
                        global_step=step)
 
             # ---------------------------------------------------------------------------------
             # ---------------------------------------------------------------------------------
 
             # VALIDATION
-            print('\n--Validation')
-            # Initialise batch accuracy
-            acc_batch_total = 0
-            learning_rate = 0
-
-            val_feeder = DataManager(train=False)
-            print('Validation size:', val_feeder.size)
-
-            num_val_samples = val_feeder.size
-            num_val_batches_per_epoch = int(num_val_samples / utils.BATCH_SIZE)
-            print('num_val_samples', num_val_samples)
-            print('num_val_batches_per_epoch: {}\n'.format(num_val_batches_per_epoch))
-
-            # Shuffle validation indices
-            shuffle_index_val = np.random.permutation(num_val_samples)
-
-            for j in range(num_val_batches_per_epoch):
-                # Get batch from indices
-                val_indices = [shuffle_index_val[i % num_val_samples] for i in
-                               range(j * utils.BATCH_SIZE, (j + 1) * utils.BATCH_SIZE)]
-                val_id, val_inputs, val_text, val_labels = val_feeder.generate_batch(index=val_indices)
-                print('val_id: {} - val_text: {}'.format(val_id, val_text))
-
-                # Validation feed dict
-                val_feed_dict = {
-                    model.inputs: val_inputs,
-                    model.labels: val_labels,
-                    model.sequence_length: [model.max_char_count] * utils.BATCH_SIZE
-                }
-                model.is_training = False
-
-                # Run validation
-                dense_decoded = sess.run(
-                    fetches=model.decoded,
-                    feed_dict=val_feed_dict
-                )
-
-                # Print decoded result
-                accuracy = utils.calculate_accuracy(original_seq=val_text, decoded_seq=dense_decoded,
-                                                    ignore_value=-1, is_print=False)
-                print('- accuracy: {:.2f}%\n'.format(accuracy * 100))
-                acc_batch_total += accuracy
-
-                with open('validation-inverse.txt', mode='a+') as f:
-                    f.write('\nval_id: {} - accuracy: {:.2f}%\n'.format(val_id, accuracy * 100))
-                    f.write('original: {}\n'.format(val_text[0]))
-                    f.write('decoded : {}\n'.format(utils.decode_result(dense_decoded[0])))
-
-            # Average accuracy
-            accuracy = (acc_batch_total * utils.BATCH_SIZE) / num_val_samples
-            # avg_train_cost = train_cost / ((current_batch + 1) * utils.BATCH_SIZE)
-
-            # Capture time epoch ends
-            now = datetime.datetime.now()
-            timestamp = '\n[{}/{} {}:{}:{}]'.format(now.day, now.month, now.hour, now.minute, now.second)
-            epoch_info = 'Epoch {}/{}:'.format(current_epoch + 1, utils.NUM_EPOCHS)
-            params_results = 'lr = {}, acc = {},'.format(learning_rate, accuracy)
-            time_elapsed = 'time_elapsed = {}'.format(time.time() - start_time)
-            print(timestamp, epoch_info, params_results, time_elapsed)
-            print('-----')
-
-            with open('validation-inverse.txt', mode='a+') as f:
-                f.write('{} {} {}\n'.format(timestamp, params_results, time_elapsed))
-                f.write('\n------------------------------------------------------------------------\n')
+            # print('\n--Validation')
+            # # Initialise batch accuracy
+            # acc_batch_total = 0
+            # learning_rate = 0
+            #
+            # val_feeder = DataManager(train=False)
+            # print('Validation size:', val_feeder.size)
+            #
+            # num_val_samples = val_feeder.size
+            # num_val_batches_per_epoch = int(num_val_samples / utils.BATCH_SIZE)
+            # print('num_val_samples', num_val_samples)
+            # print('num_val_batches_per_epoch: {}\n'.format(num_val_batches_per_epoch))
+            #
+            # # Shuffle validation indices
+            # shuffle_index_val = np.random.permutation(num_val_samples)
+            #
+            # for j in range(num_val_batches_per_epoch):
+            #     # Get batch from indices
+            #     val_indices = [shuffle_index_val[i % num_val_samples] for i in
+            #                    range(j * utils.BATCH_SIZE, (j + 1) * utils.BATCH_SIZE)]
+            #     val_id, val_inputs, val_text, val_labels = val_feeder.generate_batch(index=val_indices)
+            #     print('val_id: {} - val_text: {}'.format(val_id, val_text))
+            #
+            #     # Validation feed dict
+            #     val_feed_dict = {
+            #         model.inputs: val_inputs,
+            #         model.labels: val_labels,
+            #         model.sequence_length: [model.max_char_count] * utils.BATCH_SIZE
+            #     }
+            #     model.is_training = False
+            #
+            #     # Run validation
+            #     dense_decoded = sess.run(
+            #         fetches=model.decoded,
+            #         feed_dict=val_feed_dict
+            #     )
+            #
+            #     # Print decoded result
+            #     accuracy = utils.calculate_accuracy(original_seq=val_text, decoded_seq=dense_decoded,
+            #                                         ignore_value=-1, is_print=False)
+            #     print('- accuracy: {:.2f}%\n'.format(accuracy * 100))
+            #     acc_batch_total += accuracy
+            #
+            #     with open('validation-inverse.txt', mode='a+') as f:
+            #         f.write('\nval_id: {} - accuracy: {:.2f}%\n'.format(val_id, accuracy * 100))
+            #         f.write('original: {}\n'.format(val_text[0]))
+            #         f.write('decoded : {}\n'.format(utils.decode_result(dense_decoded[0])))
+            #
+            # # Average accuracy
+            # accuracy = (acc_batch_total * utils.BATCH_SIZE) / num_val_samples
+            # # avg_train_cost = train_cost / ((current_batch + 1) * utils.BATCH_SIZE)
+            #
+            # # Capture time epoch ends
+            # now = datetime.datetime.now()
+            # timestamp = '\n[{}/{} {}:{}:{}]'.format(now.day, now.month, now.hour, now.minute, now.second)
+            # epoch_info = 'Epoch {}/{}:'.format(current_epoch + 1, utils.NUM_EPOCHS)
+            # params_results = 'lr = {}, acc = {},'.format(learning_rate, accuracy)
+            # time_elapsed = 'time_elapsed = {}'.format(time.time() - start_time)
+            # print(timestamp, epoch_info, params_results, time_elapsed)
+            # print('-----')
+            #
+            # with open('validation-inverse.txt', mode='a+') as f:
+            #     f.write('{} {} {}\n'.format(timestamp, params_results, time_elapsed))
+            #     f.write('\n------------------------------------------------------------------------\n')
 
 
 def main(_):
